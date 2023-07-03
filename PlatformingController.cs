@@ -4,11 +4,12 @@ using UnityEngine.InputSystem;
 
 namespace PlatformingScripts
 {
+    [RequireComponent(typeof(GroundCheck), typeof(PlayerState), typeof(PlayerInput))]
     public class PlatformingController : MonoBehaviour
     {
         private Rigidbody2D rb;
         private SpriteRenderer sr;
-        private DefaultPlatformerInputActions playerInputActions;
+        public DefaultPlatformerInputActions playerInputActions;
         private PlayerState player;
 
         [Header("Running")]
@@ -54,6 +55,19 @@ namespace PlatformingScripts
 
         public event EventHandler<EventArgs> PlayerJumped;
 
+        [Header("Dash")]
+        [SerializeField]
+        private float dashDistance = 5f;
+        [SerializeField]
+        private float dashTime = 0.5f;
+        [SerializeField]
+        private float dashInputLeniency = 0.05f;
+        private Vector2 dashDirection;
+        private bool directionChanged = false;
+        private float directionChangeTime = 0f;
+        private float dashTimer = 0f;
+        private float facingDirection = 1f;
+
 
         // Use this for initialization
         void Start()
@@ -69,6 +83,7 @@ namespace PlatformingScripts
             playerInputActions.Player.Enable();
             playerInputActions.Player.Jump.performed += Jump;
             playerInputActions.Player.Jump.canceled += JumpDamp;
+            playerInputActions.Player.Dash.performed += Dash;
         }
 
         private void OnDisable()
@@ -81,17 +96,46 @@ namespace PlatformingScripts
         // Update is called once per frame
         void Update()
         {
-
+            rb.gravityScale = player.isRising ? gravityScaleRising : gravityScaleFalling;
         }
         private void FixedUpdate()
         {
-            Move();
+            if (player.isDashing)
+            {
+                if (dashTimer < dashInputLeniency && dashDirection != GetDashDir())
+                {
+                    dashDirection = GetDashDir();
+                    directionChanged = true;
+                    directionChangeTime = dashTimer;
+                    Debug.Log("DirectionChanged");
+                }
+                if (directionChanged)
+                {
+                    rb.velocity = dashDirection.normalized * (dashDistance + dashDistance * (directionChangeTime / dashTime)) / (dashTime - directionChangeTime);
+                }
+                else
+                {
+                    rb.velocity = dashDirection.normalized * (dashDistance / dashTime);
+                }
+                dashTimer += Time.deltaTime;
+                if (dashTimer >= dashTime)
+                {
+                    rb.velocity = Vector2.zero;
+                    player.isDashing = false;
+                    dashTimer = 0;
+                }
+            }
+            else
+            {
+                Move();
+            }
         }
         private void Move()
         {
             float movementInput = playerInputActions.Player.Move.ReadValue<float>();
             if (movementInput != 0)
             {
+                facingDirection = movementInput;
                 sr.flipX = (spritesFaceRight ? movementInput < 0 : movementInput > 0) && flipSprite;
             }
             rb.velocity = new Vector2(runSpeed * movementInput, rb.velocity.y);
@@ -118,6 +162,31 @@ namespace PlatformingScripts
             {
                 rb.velocity = new Vector2(rb.velocity.x, dampJumpVel);
             }
+        }
+        private void Dash(InputAction.CallbackContext context)
+        {
+            if (player.canDash)
+            {
+                directionChanged = false;
+                directionChangeTime = 0f;
+                dashDirection = GetDashDir();
+                player.isDashing = true;
+                // PlayerDashed?.Invoke(this, EventArgs.Empty);
+            }
+
+        }
+
+        private Vector2 GetDashDir()
+        {
+            float movementInput = playerInputActions.Player.Move.ReadValue<float>();
+            if (movementInput != 0)
+            {
+                facingDirection = movementInput;
+            }
+
+            float dashYDir = playerInputActions.Player.YDirection.ReadValue<float>();
+            float dashXDir = dashYDir == 0 ? facingDirection : playerInputActions.Player.Move.ReadValue<float>();
+            return new Vector2(dashXDir, dashYDir);
         }
     }
 }
