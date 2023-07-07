@@ -4,7 +4,7 @@ namespace PlatformingScripts
 {
     public abstract class JumpCondition : MonoBehaviour
     {
-        private PlayerState player;
+        protected PlayerState player;
 
         // Use this for initialization
         public void Start()

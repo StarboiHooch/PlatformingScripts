@@ -38,12 +38,6 @@ namespace PlatformingScripts
 
         private float dampLimitJumpVel => PhysicsUtility.HeightToVelocity(maxJumpHeight - minJumpHeight + dampJumpHeight, Physics2D.gravity.y, gravityScaleRising);
 
-        [SerializeField]
-        private int extraJumps = 0;
-        // private float dampJumpVel, maxJumpVel, dampLimitJumpVel;
-        [SerializeField]
-        private float coyoteTime = 0.2f;
-
 
         [Header("Gravity Tuning")]
         [SerializeField]
@@ -56,6 +50,8 @@ namespace PlatformingScripts
         public event EventHandler<EventArgs> PlayerJumped;
 
         [Header("Dash")]
+        [SerializeField]
+        private bool dashEnabled = true;
         [SerializeField]
         private float dashDistance = 5f;
         [SerializeField]
@@ -97,9 +93,7 @@ namespace PlatformingScripts
         void Update()
         {
             rb.gravityScale = player.isRising ? gravityScaleRising : gravityScaleFalling;
-        }
-        private void FixedUpdate()
-        {
+
             if (player.isDashing)
             {
                 if (dashTimer < dashInputLeniency && dashDirection != GetDashDir())
@@ -129,6 +123,10 @@ namespace PlatformingScripts
             {
                 Move();
             }
+        }
+        private void FixedUpdate()
+        {
+
         }
         private void Move()
         {
@@ -165,7 +163,7 @@ namespace PlatformingScripts
         }
         private void Dash(InputAction.CallbackContext context)
         {
-            if (player.canDash)
+            if (dashEnabled && player.canDash)
             {
                 directionChanged = false;
                 directionChangeTime = 0f;
