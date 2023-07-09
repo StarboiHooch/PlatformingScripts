@@ -9,6 +9,8 @@ namespace PlatformingScripts
         private float padding = 0.1f;
         [SerializeField]
         private LayerMask whatIsGround;
+
+        [SerializeField]
         private new void Start()
         {
             base.Start();
