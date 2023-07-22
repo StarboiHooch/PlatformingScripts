@@ -61,10 +61,9 @@ namespace PlatformingScripts
         [SerializeField]
         private float dashTime = 0.5f;
         [SerializeField]
-        private float dashInputLeniency = 0.05f;
+        private float dashDelay = 0.05f;
+        private bool isPreppingDash = false;
         private Vector2 dashDirection;
-        private bool directionChanged = false;
-        private float directionChangeTime = 0f;
         private float dashTimer = 0f;
         private float facingDirection = 1f;
 
@@ -83,7 +82,7 @@ namespace PlatformingScripts
             playerInputActions.Player.Enable();
             playerInputActions.Player.Jump.performed += Jump;
             playerInputActions.Player.Jump.canceled += JumpDamp;
-            playerInputActions.Player.Dash.performed += Dash;
+            playerInputActions.Player.Dash.performed += DashPerformed;
         }
 
         private void OnDisable()
@@ -102,27 +101,29 @@ namespace PlatformingScripts
         {
             if (player.isDashing)
             {
-                if (dashTimer < dashInputLeniency && dashDirection != GetDashDir())
+                dashTimer += Time.deltaTime;
+                if (dashTimer >= dashDelay)
                 {
                     dashDirection = GetDashDir();
-                    directionChanged = true;
-                    directionChangeTime = dashTimer;
-                    Debug.Log("DirectionChanged");
-                }
-                if (directionChanged)
-                {
-                    rb.velocity = dashDirection.normalized * (dashDistance + dashDistance * (directionChangeTime / dashTime)) / (dashTime - directionChangeTime);
+                    isPreppingDash = false;
                 }
                 else
                 {
-                    rb.velocity = dashDirection.normalized * (dashDistance / dashTime);
+                    Debug.Log($"dash buffer frame: {dashTimer}");
                 }
-                dashTimer += Time.deltaTime;
                 if (dashTimer >= dashTime)
                 {
                     rb.velocity = Vector2.zero;
                     player.isDashing = false;
                     dashTimer = 0;
+                }
+                else if (isPreppingDash)
+                {
+                    rb.velocity = Vector2.zero;
+                }
+                else
+                {
+                    rb.velocity = dashDirection.normalized * (dashDistance / dashTime);
                 }
             }
             else
@@ -163,14 +164,12 @@ namespace PlatformingScripts
                 rb.velocity = new Vector2(rb.velocity.x, dampJumpVel);
             }
         }
-        private void Dash(InputAction.CallbackContext context)
+        private void DashPerformed(InputAction.CallbackContext context)
         {
             if (player.canDash)
             {
-                directionChanged = false;
-                directionChangeTime = 0f;
-                dashDirection = GetDashDir();
                 player.isDashing = true;
+                isPreppingDash = true;
                 // PlayerDashed?.Invoke(this, EventArgs.Empty);
             }
 
