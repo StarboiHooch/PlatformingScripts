@@ -57,7 +57,9 @@ namespace PlatformingScripts
         [SerializeField]
         private float dashTime = 0.5f;
         [SerializeField]
-        private float dashDelay = 0.05f;
+        private float dashStartLag = 0.05f;
+        [SerializeField]
+        private float dashEndLag = 0.05f;
         private bool isPreppingDash = false;
         private Vector2 dashDirection;
         private float dashTimer = 0f;
@@ -91,40 +93,51 @@ namespace PlatformingScripts
         // Update is called once per frame
         void Update()
         {
-            rb.gravityScale = player.isRising ? gravityScaleRising : gravityScaleFalling;
-
             if (player.isDashing)
             {
                 dashTimer += Time.deltaTime;
-                if (dashTimer >= dashDelay)
+                if (isPreppingDash && dashTimer >= dashStartLag)
                 {
                     dashDirection = GetDashDir();
                     isPreppingDash = false;
                 }
-                else
-                {
-                    Debug.Log($"dash buffer frame: {dashTimer}");
-                }
-                if (dashTimer >= dashTime)
+                if (dashTimer >= dashStartLag + dashTime + dashEndLag)
                 {
                     rb.velocity = Vector2.zero;
                     player.isDashing = false;
                     dashTimer = 0;
                 }
-                else if (isPreppingDash)
-                {
-                    rb.velocity = Vector2.zero;
-                }
-                else
-                {
-                    rb.velocity = dashDirection.normalized * (dashDistance / dashTime);
-                }
+            }
+
+            rb.gravityScale = player.isDashing ? 0f : player.isRising ? gravityScaleRising : gravityScaleFalling;
+
+            if (player.isDashing)
+            {
+                Dash();
             }
             else
             {
                 Move();
             }
         }
+
+        private void Dash()
+        {
+            if (isPreppingDash)
+            {
+                rb.velocity = Vector2.zero;
+                dashDirection = GetDashDir();
+            }
+            else if (dashTimer <= dashStartLag + dashTime)
+            {
+                rb.velocity = dashDirection.normalized * (dashDistance / dashTime);
+            }
+            else
+            {
+                rb.velocity = Vector2.zero;
+            }
+        }
+
         private void FixedUpdate()
         {
 
@@ -168,6 +181,7 @@ namespace PlatformingScripts
             {
                 player.isDashing = true;
                 isPreppingDash = true;
+                dashDirection.y = 0;
                 // PlayerDashed?.Invoke(this, EventArgs.Empty);
             }
 
@@ -175,15 +189,13 @@ namespace PlatformingScripts
 
         private Vector2 GetDashDir()
         {
-            float movementInput = playerInputActions.Player.Move.ReadValue<float>();
-            if (movementInput != 0)
+            float inputX = playerInputActions.Player.Move.ReadValue<float>();
+            float inputY = playerInputActions.Player.YDirection.ReadValue<float>();
+            if (inputX != 0)
             {
-                facingDirection = movementInput;
+                facingDirection = inputX;
             }
-
-            float dashYDir = playerInputActions.Player.YDirection.ReadValue<float>();
-            float dashXDir = dashYDir == 0 ? facingDirection : playerInputActions.Player.Move.ReadValue<float>();
-            return new Vector2(dashXDir, dashYDir);
+            return inputX == 0 && inputY == 0 ? new Vector2(facingDirection, dashDirection.y) : new Vector2(inputX, inputY);
         }
     }
 }
