@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Assets.Modules.GameJamHelpers.Generic;
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -60,6 +61,9 @@ namespace PlatformingScripts
         private float dashStartLag = 0.05f;
         [SerializeField]
         private float dashEndLag = 0.05f;
+
+        [SerializeField]
+        private PrefabEmitter dashTrail;
         private bool isPreppingDash = false;
         private Vector2 dashDirection;
         private float dashTimer = 0f;
@@ -103,6 +107,10 @@ namespace PlatformingScripts
                 }
                 if (dashTimer >= dashStartLag + dashTime + dashEndLag)
                 {
+                    if (dashTrail != null)
+                    {
+                        dashTrail.SetActive(false);
+                    }
                     rb.velocity = Vector2.zero;
                     player.isDashing = false;
                     dashTimer = 0;
@@ -130,10 +138,18 @@ namespace PlatformingScripts
             }
             else if (dashTimer <= dashStartLag + dashTime)
             {
+                if (dashTrail != null)
+                {
+                    dashTrail.SetActive(true);
+                }
                 rb.velocity = dashDirection.normalized * (dashDistance / dashTime);
             }
             else
             {
+                if (dashTrail != null)
+                {
+                    dashTrail.SetActive(false);
+                }
                 rb.velocity = Vector2.zero;
             }
         }
