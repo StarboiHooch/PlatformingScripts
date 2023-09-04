@@ -1,23 +1,28 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace PlatformingScripts
 {
     public class PlayerState : MonoBehaviour
     {
         private Rigidbody2D rb;
+
         private GroundCheck groundCheck;
-        public bool isGrounded = false;
+        private bool isGrounded = false;
+        public bool IsGrounded => isGrounded;
+
         public bool isMoving = false;
         public bool isRising = false;
+        public bool isPreDashing = false;
         public bool isDashing = false;
         private DefaultPlatformerInputActions InputActions;
 
-        private List<JumpCondition> jumpConditions = new List<JumpCondition>();
-        public void AddJumpCondition(JumpCondition condition) => jumpConditions.Add(condition);
-        public bool canJump => jumpConditions.Any(condition => condition.CanJump());
-        public bool canDash => true;
+
+        [SerializeField]
+        private bool jumpEnabled = true;
+        public bool canJump => jumpEnabled;
+        [SerializeField]
+        private bool dashEnabled = true;
+        public bool canDash => dashEnabled;
         // Use this for initialization  
         void Start()
         {

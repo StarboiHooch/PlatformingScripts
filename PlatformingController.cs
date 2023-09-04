@@ -39,6 +39,14 @@ namespace PlatformingScripts
 
         private float dampLimitJumpVel => PhysicsUtility.HeightToVelocity(maxJumpHeight - minJumpHeight + dampJumpHeight, Physics2D.gravity.y, gravityScaleRising);
 
+        [SerializeField]
+        private float coyoteTime = 0.1f;
+        private float coyoteTimer = 0f;
+        [SerializeField]
+        private int jumpsAllowed = 1;
+        private int remainingJumps = 0;
+
+
 
         [Header("Gravity Tuning")]
         [SerializeField]
@@ -64,7 +72,7 @@ namespace PlatformingScripts
 
         [SerializeField]
         private PrefabEmitter dashTrail;
-        private bool isPreppingDash = false;
+
         private Vector2 dashDirection;
         private float dashTimer = 0f;
         private float facingDirection = 1f;
@@ -97,13 +105,27 @@ namespace PlatformingScripts
         // Update is called once per frame
         void Update()
         {
+            if (player.IsGrounded)
+            {
+                remainingJumps = jumpsAllowed;
+                coyoteTimer = 0f;
+            }
+            else
+            {
+                if (remainingJumps == jumpsAllowed && coyoteTimer > coyoteTime)
+                {
+                    remainingJumps--;
+                }
+                coyoteTimer += Time.deltaTime;
+            }
+
             if (player.isDashing)
             {
                 dashTimer += Time.deltaTime;
-                if (isPreppingDash && dashTimer >= dashStartLag)
+                if (player.isPreDashing && dashTimer >= dashStartLag)
                 {
                     dashDirection = GetDashDir();
-                    isPreppingDash = false;
+                    player.isPreDashing = false;
                 }
                 if (dashTimer >= dashStartLag + dashTime + dashEndLag)
                 {
@@ -131,7 +153,7 @@ namespace PlatformingScripts
 
         private void Dash()
         {
-            if (isPreppingDash)
+            if (player.isPreDashing)
             {
                 rb.velocity = Vector2.zero;
                 dashDirection = GetDashDir();
@@ -154,10 +176,6 @@ namespace PlatformingScripts
             }
         }
 
-        private void FixedUpdate()
-        {
-
-        }
         private void Move()
         {
             float movementInput = playerInputActions.Player.Move.ReadValue<float>();
@@ -171,8 +189,13 @@ namespace PlatformingScripts
 
         private void Jump(InputAction.CallbackContext context)
         {
-            if (player.canJump)
+            if (
+                player.canJump &&
+                ((remainingJumps < jumpsAllowed && remainingJumps > 0) ||
+                (remainingJumps == jumpsAllowed && remainingJumps > 0 && (player.IsGrounded || coyoteTimer < coyoteTime)))
+            )
             {
+                remainingJumps--;
                 rb.gravityScale = gravityScaleRising;
                 rb.velocity = new Vector2(rb.velocity.x, maxJumpVel);
                 PlayerJumped?.Invoke(this, EventArgs.Empty);
@@ -196,7 +219,7 @@ namespace PlatformingScripts
             if (dashEnabled && player.canDash)
             {
                 player.isDashing = true;
-                isPreppingDash = true;
+                player.isPreDashing = true;
                 dashDirection.y = 0;
                 // PlayerDashed?.Invoke(this, EventArgs.Empty);
             }

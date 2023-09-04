@@ -2,7 +2,7 @@
 
 namespace PlatformingScripts
 {
-    public class GroundCheck : JumpCondition
+    public class GroundCheck : MonoBehaviour
     {
         private Collider2D playerCollider;
         [SerializeField]
@@ -10,15 +10,9 @@ namespace PlatformingScripts
         [SerializeField]
         private LayerMask whatIsGround;
 
-        [SerializeField]
-        private new void Start()
+        private void Start()
         {
-            base.Start();
             playerCollider = GetComponent<Collider2D>();
-        }
-        public override bool CanJump()
-        {
-            return CheckGrounded();
         }
 
         public bool CheckGrounded()

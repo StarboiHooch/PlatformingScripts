@@ -22,15 +22,19 @@ namespace Assets.Scripts.PlatformingScripts
 
         private void FixedUpdate()
         {
-            if (player.isGrounded && player.isMoving)
+            if (player.isPreDashing)
+            {
+                anim.Play("PreDash");
+            }
+            else if (player.IsGrounded && player.isMoving)
             {
                 anim.Play("Run");
             }
-            else if (!player.isGrounded && player.isRising)
+            else if (!player.IsGrounded && player.isRising)
             {
                 anim.Play("Rise");
             }
-            else if (!player.isGrounded && !player.isRising)
+            else if (!player.IsGrounded && !player.isRising)
             {
                 anim.Play("Fall");
             }
