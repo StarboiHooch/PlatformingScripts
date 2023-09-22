@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace PlatformingScripts
 {
@@ -14,8 +15,8 @@ namespace PlatformingScripts
         public bool isRising = false;
         public bool isPreDashing = false;
         public bool isDashing = false;
-        private DefaultPlatformerInputActions InputActions;
-
+        private PlayerInput playerInput;
+        private InputAction movementInput;
 
         [SerializeField]
         private bool jumpEnabled = true;
@@ -28,14 +29,15 @@ namespace PlatformingScripts
         {
             rb = GetComponent<Rigidbody2D>();
             groundCheck = GetComponent<GroundCheck>();
-            InputActions = GetComponent<PlatformingController>().playerInputActions;
+            playerInput = GetComponent<PlayerInput>();
+            movementInput = playerInput.actions.FindAction("Movement", true);
         }
 
         // Update is called once per frame
         void Update()
         {
             isGrounded = groundCheck.CheckGrounded();
-            isMoving = (InputActions.Player.Move.ReadValue<float>() != 0) && (rb.velocity.x != 0);
+            isMoving = (Mathf.Abs(movementInput.ReadValue<Vector2>().x) > 0.1) && (rb.velocity.x != 0);
             isRising = !isGrounded && rb.velocity.y > 0;
         }
 

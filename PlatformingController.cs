@@ -10,7 +10,8 @@ namespace PlatformingScripts
     {
         private Rigidbody2D rb;
         private SpriteRenderer sr;
-        public DefaultPlatformerInputActions playerInputActions;
+        private PlayerInput playerInput;
+        private InputAction movementInput;
         private PlayerState player;
 
         [Header("Running")]
@@ -84,22 +85,8 @@ namespace PlatformingScripts
             rb = GetComponent<Rigidbody2D>();
             sr = GetComponent<SpriteRenderer>();
             player = GetComponent<PlayerState>();
-        }
-
-        private void OnEnable()
-        {
-            playerInputActions = new DefaultPlatformerInputActions();
-            playerInputActions.Player.Enable();
-            playerInputActions.Player.Jump.performed += Jump;
-            playerInputActions.Player.Jump.canceled += JumpDamp;
-            playerInputActions.Player.Dash.performed += DashPerformed;
-        }
-
-        private void OnDisable()
-        {
-            playerInputActions.Player.Jump.performed += Jump;
-            playerInputActions.Player.Jump.canceled += JumpDamp;
-            playerInputActions.Player.Disable();
+            playerInput = GetComponent<PlayerInput>();
+            movementInput = playerInput.actions.FindAction("Movement", true);
         }
 
         // Update is called once per frame
@@ -151,6 +138,19 @@ namespace PlatformingScripts
             }
         }
 
+        public void OnDash(InputAction.CallbackContext context)
+        {
+            if (context.performed) { OnDashPerformed(); }
+
+        }
+
+        public void OnJump(InputAction.CallbackContext context)
+        {
+            if (context.performed) { OnJumpPerformed(); }
+            if (context.canceled) { OnJumpCancelled(); }
+
+        }
+
         private void Dash()
         {
             if (player.isPreDashing)
@@ -178,16 +178,16 @@ namespace PlatformingScripts
 
         private void Move()
         {
-            float movementInput = playerInputActions.Player.Move.ReadValue<float>();
-            if (movementInput != 0)
+            float directionX = Utility.NormaliseForJoystickThreshhold(movementInput.ReadValue<Vector2>().x);
+            if (directionX != 0)
             {
-                facingDirection = movementInput;
-                sr.flipX = (spritesFaceRight ? movementInput < 0 : movementInput > 0) && flipSprite;
+                facingDirection = directionX;
+                sr.flipX = (spritesFaceRight ? directionX < 0 : directionX > 0) && flipSprite;
             }
-            rb.velocity = new Vector2(runSpeed * movementInput, rb.velocity.y);
+            rb.velocity = new Vector2(runSpeed * directionX, rb.velocity.y);
         }
 
-        private void Jump(InputAction.CallbackContext context)
+        private void OnJumpPerformed()
         {
             if (
                 player.canJump &&
@@ -202,7 +202,7 @@ namespace PlatformingScripts
             }
 
         }
-        private void JumpDamp(InputAction.CallbackContext context)
+        private void OnJumpCancelled()
         {
             if (rb.velocity.y > dampLimitJumpVel)
             {
@@ -214,7 +214,7 @@ namespace PlatformingScripts
                 rb.velocity = new Vector2(rb.velocity.x, dampJumpVel);
             }
         }
-        private void DashPerformed(InputAction.CallbackContext context)
+        private void OnDashPerformed()
         {
             if (dashEnabled && player.canDash)
             {
@@ -228,8 +228,8 @@ namespace PlatformingScripts
 
         private Vector2 GetDashDir()
         {
-            float inputX = playerInputActions.Player.Move.ReadValue<float>();
-            float inputY = playerInputActions.Player.YDirection.ReadValue<float>();
+            float inputX = Utility.NormaliseForJoystickThreshhold(movementInput.ReadValue<Vector2>().x);
+            float inputY = Utility.NormaliseForJoystickThreshhold(movementInput.ReadValue<Vector2>().y);
             if (inputX != 0)
             {
                 facingDirection = inputX;
