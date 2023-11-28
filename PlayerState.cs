@@ -10,6 +10,8 @@ namespace PlatformingScripts
         private GroundCheck groundCheck;
         private bool isGrounded = false;
         public bool IsGrounded => isGrounded;
+        private Collider2D currentGround;
+        public Collider2D CurrentGround => currentGround;
 
         public bool isMoving = false;
         public bool isRising = false;
@@ -23,6 +25,10 @@ namespace PlatformingScripts
         public bool canJump => jumpEnabled;
         [SerializeField]
         private bool dashEnabled = true;
+        public void SetDashEnabled(bool enabled)
+        {
+            dashEnabled = enabled;
+        }
         public bool canDash => dashEnabled;
         // Use this for initialization  
         void Start()
@@ -36,10 +42,11 @@ namespace PlatformingScripts
         // Update is called once per frame
         void Update()
         {
-            isGrounded = groundCheck.CheckGrounded();
-            isMoving = (Mathf.Abs(movementInput.ReadValue<Vector2>().x) > 0.1) && (rb.velocity.x != 0);
+            currentGround = groundCheck.GetGroundCollider();
+            isGrounded = currentGround != null;
+            //isMoving = (Mathf.Abs(movementInput.ReadValue<Vector2>().x) > 0.1) && (rb.velocity.x != 0);
+            isMoving = (Mathf.Abs(rb.velocity.x) > 0.1);
             isRising = !isGrounded && rb.velocity.y > 0;
         }
-
     }
 }

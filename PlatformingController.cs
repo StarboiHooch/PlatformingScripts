@@ -1,5 +1,6 @@
 ﻿using Assets.Modules.GameJamHelpers.Generic;
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -45,7 +46,7 @@ namespace PlatformingScripts
         private float coyoteTimer = 0f;
         [SerializeField]
         private int jumpsAllowed = 1;
-        private int remainingJumps = 0;
+        private int jumpsRemaining = 0;
 
 
 
@@ -70,6 +71,9 @@ namespace PlatformingScripts
         private float dashStartLag = 0.05f;
         [SerializeField]
         private float dashEndLag = 0.05f;
+        [SerializeField]
+        private int dashesAllowed = 1;
+        private int dashesRemaining = 0;
 
         [SerializeField]
         private PrefabEmitter dashTrail;
@@ -77,6 +81,11 @@ namespace PlatformingScripts
         private Vector2 dashDirection;
         private float dashTimer = 0f;
         private float facingDirection = 1f;
+
+
+        private bool moveToCoroutineIsActive = false;
+        public event EventHandler<EventArgs> MoveToLocationReached;
+        private bool isInputEnabled = true;
 
 
         // Use this for initialization
@@ -87,6 +96,8 @@ namespace PlatformingScripts
             player = GetComponent<PlayerState>();
             playerInput = GetComponent<PlayerInput>();
             movementInput = playerInput.actions.FindAction("Movement", true);
+            moveToCoroutineIsActive = false;
+            isInputEnabled = true;
         }
 
         // Update is called once per frame
@@ -94,14 +105,15 @@ namespace PlatformingScripts
         {
             if (player.IsGrounded)
             {
-                remainingJumps = jumpsAllowed;
+                jumpsRemaining = jumpsAllowed;
+                dashesRemaining = dashesAllowed;
                 coyoteTimer = 0f;
             }
             else
             {
-                if (remainingJumps == jumpsAllowed && coyoteTimer > coyoteTime)
+                if (jumpsRemaining == jumpsAllowed && coyoteTimer > coyoteTime)
                 {
-                    remainingJumps--;
+                    jumpsRemaining--;
                 }
                 coyoteTimer += Time.deltaTime;
             }
@@ -134,21 +146,43 @@ namespace PlatformingScripts
             }
             else
             {
-                Move();
+                if (!moveToCoroutineIsActive)
+                {
+                    Move();
+                }
             }
+
         }
 
+
+        public void ResetMovement()
+        {
+            player.isPreDashing = false;
+            if (dashTrail != null)
+            {
+                dashTrail.SetActive(false);
+            }
+            rb.velocity = Vector2.zero;
+            player.isDashing = false;
+            dashTimer = 0;
+            dashesRemaining = dashesAllowed;
+        }
         public void OnDash(InputAction.CallbackContext context)
         {
-            if (context.performed) { OnDashPerformed(); }
+            if (!moveToCoroutineIsActive && isInputEnabled)
+            {
+                if (context.performed) { OnDashPerformed(); }
+            }
 
         }
 
         public void OnJump(InputAction.CallbackContext context)
         {
-            if (context.performed) { OnJumpPerformed(); }
-            if (context.canceled) { OnJumpCancelled(); }
-
+            if (!moveToCoroutineIsActive && isInputEnabled)
+            {
+                if (context.performed) { OnJumpPerformed(); }
+                if (context.canceled) { OnJumpCancelled(); }
+            }
         }
 
         private void Dash()
@@ -178,24 +212,62 @@ namespace PlatformingScripts
 
         private void Move()
         {
-            float directionX = Utility.NormaliseForJoystickThreshhold(movementInput.ReadValue<Vector2>().x);
-            if (directionX != 0)
+            if (isInputEnabled)
             {
-                facingDirection = directionX;
-                sr.flipX = (spritesFaceRight ? directionX < 0 : directionX > 0) && flipSprite;
+                float directionX = Utility.NormaliseForJoystickThreshhold(movementInput.ReadValue<Vector2>().x);
+                if (directionX != 0)
+                {
+                    facingDirection = directionX;
+                    sr.flipX = (spritesFaceRight ? directionX < 0 : directionX > 0) && flipSprite;
+                }
+                rb.velocity = new Vector2(runSpeed * directionX, rb.velocity.y);
             }
-            rb.velocity = new Vector2(runSpeed * directionX, rb.velocity.y);
+            else
+            {
+                rb.velocity = new Vector2(0f, rb.velocity.y);
+            }
+        }
+
+        public void MoveTo(float xCoord)
+        {
+            if (!moveToCoroutineIsActive)
+            {
+                StartCoroutine(MoveToCoroutine(xCoord));
+            }
+        }
+
+        public void EnableInput(bool enable)
+        {
+            isInputEnabled = enable;
+        }
+
+
+        private IEnumerator MoveToCoroutine(float xCoord)
+        {
+            moveToCoroutineIsActive = true;
+            float initialDirectionToTarget = this.gameObject.transform.position.x > xCoord ? -1 : 1;
+            float currentDirectionToTarget = initialDirectionToTarget;
+            facingDirection = initialDirectionToTarget;
+            sr.flipX = (spritesFaceRight ? initialDirectionToTarget < 0 : initialDirectionToTarget > 0) && flipSprite;
+            while (currentDirectionToTarget * -1 != initialDirectionToTarget)
+            {
+                rb.velocity = new Vector2(runSpeed * initialDirectionToTarget, rb.velocity.y);
+                currentDirectionToTarget = this.gameObject.transform.position.x > xCoord ? -1 : 1;
+                yield return null;
+            }
+            MoveToLocationReached?.Invoke(this, EventArgs.Empty);
+            moveToCoroutineIsActive = false;
         }
 
         private void OnJumpPerformed()
         {
             if (
                 player.canJump &&
-                ((remainingJumps < jumpsAllowed && remainingJumps > 0) ||
-                (remainingJumps == jumpsAllowed && remainingJumps > 0 && (player.IsGrounded || coyoteTimer < coyoteTime)))
+                ((jumpsRemaining < jumpsAllowed && jumpsRemaining > 0) ||
+                (jumpsRemaining == jumpsAllowed && jumpsRemaining > 0 && (player.IsGrounded || coyoteTimer < coyoteTime)))
             )
             {
-                remainingJumps--;
+                jumpsRemaining--;
                 rb.gravityScale = gravityScaleRising;
                 rb.velocity = new Vector2(rb.velocity.x, maxJumpVel);
                 PlayerJumped?.Invoke(this, EventArgs.Empty);
@@ -216,8 +288,9 @@ namespace PlatformingScripts
         }
         private void OnDashPerformed()
         {
-            if (dashEnabled && player.canDash)
+            if (dashEnabled && player.canDash && dashesRemaining > 0)
             {
+                dashesRemaining--;
                 player.isDashing = true;
                 player.isPreDashing = true;
                 dashDirection.y = 0;
