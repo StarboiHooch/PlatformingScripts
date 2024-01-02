@@ -1,16 +1,16 @@
-﻿using PlatformingScripts;
+﻿using Assets.Modules.PlatformingScripts;
 using UnityEngine;
 
 namespace Assets.Scripts.PlatformingScripts
 {
     public class AnimationController : MonoBehaviour
     {
-        private PlayerState player;
+        private NewPlatformerController player;
         private Animator anim;
         // Use this for initialization
         void Start()
         {
-            player = GetComponent<PlayerState>();
+            player = GetComponent<NewPlatformerController>();
             anim = GetComponent<Animator>();
         }
 
@@ -22,19 +22,19 @@ namespace Assets.Scripts.PlatformingScripts
 
         private void FixedUpdate()
         {
-            if (player.isPreDashing)
+            if (player.IsPreDashing)
             {
                 anim.Play("PreDash");
             }
-            else if (player.IsGrounded && player.isMoving)
+            else if (player.IsGrounded && player.IsMoving)
             {
                 anim.Play("Run");
             }
-            else if (!player.IsGrounded && player.isRising)
+            else if (!player.IsGrounded && player.IsRising)
             {
                 anim.Play("Rise");
             }
-            else if (!player.IsGrounded && !player.isRising)
+            else if (!player.IsGrounded && !player.IsRising)
             {
                 anim.Play("Fall");
             }

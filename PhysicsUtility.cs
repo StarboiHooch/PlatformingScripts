@@ -22,6 +22,11 @@ namespace PlatformingScripts
             return (float)Mathf.Sqrt(Mathf.Abs((2 * height) / a));
         }
 
+        public static float VelocityChangeToTime(float initialVelocity, float finalVelocity, float acceleration)
+        {
+            return (finalVelocity - initialVelocity) / acceleration;
+        }
+
         public static float VelocityChangeToHeight(float startingVelocity, float currentVelocity, float gravity, float gravityScale)
         {
             return (startingVelocity * startingVelocity - currentVelocity * currentVelocity) / (2 * Mathf.Abs(gravity * gravityScale));
