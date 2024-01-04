@@ -1,16 +1,16 @@
-﻿using Assets.Modules.PlatformingScripts;
+﻿using PlatformingScripts;
 using UnityEngine;
 
 namespace Assets.Scripts.PlatformingScripts
 {
     public class AnimationController : MonoBehaviour
     {
-        private NewPlatformerController player;
+        private PlatformingController player;
         private Animator anim;
         // Use this for initialization
         void Start()
         {
-            player = GetComponent<NewPlatformerController>();
+            player = GetComponent<PlatformingController>();
             anim = GetComponent<Animator>();
         }
 

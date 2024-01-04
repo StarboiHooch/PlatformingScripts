@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 
 namespace Assets.Modules.PlatformingScripts
 {
-    public partial class NewPlatformerController : MonoBehaviour
+    public class NewPlatformerController : MonoBehaviour
     {
         [Header("General")]
         [SerializeField]
@@ -116,6 +116,31 @@ namespace Assets.Modules.PlatformingScripts
         #region Disabling Movement
         private int movementInterrupters = 0;
         private bool canMove => movementEnabled && movementInterrupters == 0;
+
+        #endregion
+
+
+        #region Movement Stuff
+
+        private void ProcessMovement()
+        {
+            if (runEnabled)
+            {
+                SetFacingDirection();
+                float xSpeed = runSpeed * movementInput.x;
+                float ySpeed = isWallSliding ? -wallSlideSpeed : rb.velocity.y;
+                rb.velocity = new Vector2(xSpeed, ySpeed);
+            }
+        }
+
+        private void SetFacingDirection()
+        {
+            if (movementInput.x != 0)
+            {
+                facingDirection = movementInput.x;
+                sr.flipX = (spritesFaceRight ? movementInput.x < 0 : movementInput.x > 0) && flipSprites;
+            }
+        }
 
         #endregion
 
@@ -304,6 +329,15 @@ namespace Assets.Modules.PlatformingScripts
         private float jumpDampLimitVel => PhysicsUtility.HeightToVelocity(jumpMaxHeight - jumpMinHeight + jumpDampHeight, Physics2D.gravity.y, gravityScaleRising);
         private float jumpDampVel => PhysicsUtility.HeightToVelocity(jumpDampHeight, Physics2D.gravity.y, gravityScaleRising);
 
+
+        public void OnJump(InputAction.CallbackContext context)
+        {
+            if (canMove)
+            {
+                if (context.performed) { jumpPerformed = true; }
+                if (context.canceled) { jumpCancelled = true; }
+            }
+        }
         private void OnJumpPerformed()
         {
             jumpPerformed = false;
@@ -520,33 +554,5 @@ namespace Assets.Modules.PlatformingScripts
             }
         }
 
-        public void OnJump(InputAction.CallbackContext context)
-        {
-            if (canMove)
-            {
-                if (context.performed) { jumpPerformed = true; }
-                if (context.canceled) { jumpCancelled = true; }
-            }
-        }
-
-        private void ProcessMovement()
-        {
-            if (runEnabled)
-            {
-                SetFacingDirection();
-                float xSpeed = runSpeed * movementInput.x;
-                float ySpeed = isWallSliding ? -wallSlideSpeed : rb.velocity.y;
-                rb.velocity = new Vector2(xSpeed, ySpeed);
-            }
-        }
-
-        private void SetFacingDirection()
-        {
-            if (movementInput.x != 0)
-            {
-                facingDirection = movementInput.x;
-                sr.flipX = (spritesFaceRight ? movementInput.x < 0 : movementInput.x > 0) && flipSprites;
-            }
-        }
     }
 }
