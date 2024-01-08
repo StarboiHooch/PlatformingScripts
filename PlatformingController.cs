@@ -176,8 +176,7 @@ namespace PlatformingScripts
         {
             moveToCoroutineIsActive = true;
             AddMovementInterrupter();
-            isWallJumping = false;
-            isDashing = false;
+            ResetMovement();
             float initialDirectionToTarget = this.gameObject.transform.position.x > xCoord ? -1 : 1;
             float currentDirectionToTarget = initialDirectionToTarget;
             facingDirection = initialDirectionToTarget;
@@ -197,7 +196,7 @@ namespace PlatformingScripts
         public void ResetMovement()
         {
             isWallJumping = false;
-            isDashing = false;
+            CancelDash();
             rb.velocity = Vector2.zero;
         }
         #endregion
@@ -459,7 +458,7 @@ namespace PlatformingScripts
         private void OnDashPerformed()
         {
             dashPerformed = false;
-            if (dashEnabled && dashesRemaining > 0)
+            if (dashEnabled && dashesRemaining > 0 && !isDashing)
             {
                 dashesRemaining--;
                 dashTimer = 0;
@@ -570,7 +569,10 @@ namespace PlatformingScripts
                 coyoteTimer = 0f;
 
                 jumpsRemaining = jumpsAllowed;
-                dashesRemaining = dashesAllowed;
+                if (!isDashing)
+                {
+                    dashesRemaining = dashesAllowed;
+                }
             }
             else
             {
